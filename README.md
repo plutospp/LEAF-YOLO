@@ -74,14 +74,75 @@ See [grad_cam_visualize.ipynb](grad_cam_visualize.ipynb)
 
 ## Inference
 
-On video:
+### 1. Command-Line Interface (`detect.py`)
+
+`detect.py` supports inference on single images, image directories, video files, live webcams, and streaming sources (RTSP/HTTP).
+
+#### Video Inference (File)
+Run inference on a video file (`.mp4`, `.avi`, `.mov`, `.mkv`):
 ``` shell
-python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf 0.25 --img-size 640 --source yourvideo.mp4
+python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf-thres 0.25 --img-size 640 --source path/to/yourvideo.mp4
 ```
 
-On image:
+#### Live Stream / Webcam Inference
+Run inference on a local webcam (source `0`) or RTSP/HTTP stream:
 ``` shell
-python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf 0.25 --img-size 640 --source yourimage.png
+# Webcam
+python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf-thres 0.25 --img-size 640 --source 0
+
+# RTSP Stream
+python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf-thres 0.25 --img-size 640 --source "rtsp://192.168.1.1/live"
+```
+
+#### Image Inference
+``` shell
+python detect.py --weights cfg/LEAF-YOLO/leaf-sizes/weights/best.pt --conf-thres 0.25 --img-size 640 --source path/to/yourimage.png
+```
+
+#### Key Arguments for Inference:
+- `--source`: Path to input video/image, directory, webcam ID (`0`), or stream URL (`rtsp://`, `http://`).
+- `--weights`: Model weights path (`.pt`).
+- `--img-size`: Inference image size in pixels (default: `640`).
+- `--conf-thres`: Object confidence threshold (default: `0.25`).
+- `--iou-thres`: NMS IoU threshold (default: `0.45`).
+- `--view-img`: Display detection results in a window during processing.
+- `--save-txt`: Save detection bounding box coordinates to text files in YOLO format.
+- `--device`: CUDA device selection, e.g., `0` or `cpu`.
+- `--no-trace`: Disable model tracing (useful if tracing fails on custom ops or devices).
+
+#### Outputs
+Results (annotated images or videos with bounding boxes) are saved automatically to `runs/detect/exp/` (or `exp2`, `exp3`, etc.).
+
+### 2. Python API / PyTorch Hub Integration
+
+You can also run video inference programmatically in custom Python scripts:
+
+``` python
+import cv2
+import torch
+from hubconf import custom
+
+# Load model
+model = custom(path_or_model='cfg/LEAF-YOLO/leaf-sizes/weights/best.pt', autoshape=True)
+
+# Process video stream frame by frame
+cap = cv2.VideoCapture('path/to/yourvideo.mp4')
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Inference (expects BGR or RGB numpy array)
+    results = model(frame)
+
+    # Process or render results
+    rendered_frame = results.render()[0]  # numpy array with bounding boxes plotted
+    cv2.imshow('LEAF-YOLO Video Demo', rendered_frame)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
 ```
 
 ## Export (Follow YOLOv7)
